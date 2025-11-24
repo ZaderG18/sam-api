@@ -1,5 +1,6 @@
-<?
+<?php
+
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use Symfony\Component\Routing\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
