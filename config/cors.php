@@ -1,26 +1,18 @@
 <?php
 
+// config/cors.php
 return [
-
-    'paths' => [
-        'api/*',
-        'sanctum/csrf-cookie',
-    ],
-
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'http://localhost:3000',
-    ],
+    // IMPORTANTE: O endereço exato do seu Front-end
+    'allowed_origins' => ['http://localhost:3000'], 
 
     'allowed_origins_patterns' => [],
-
     'allowed_headers' => ['*'],
-
     'exposed_headers' => [],
-
     'max_age' => 0,
 
-    'supports_credentials' => true,
-
+    // IMPORTANTE: Permite cookies/sessão
+    'supports_credentials' => true, 
 ];
