@@ -14,6 +14,7 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
+   
     /**
      * The attributes that are mass assignable.
      *
@@ -23,6 +24,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        // NOVOS CAMPOS DO SAAS:
+        'id_instituicao', // Vital para o Multi-Tenancy
+        'tipo_usuario',   // 'diretor', 'aluno', etc.
+        'foto_perfil',
+        'telefone'
     ];
 
     /**

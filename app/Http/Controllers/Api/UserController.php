@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Aluno;
 use App\Models\Professor;
-use App\Models\Perfil;
+use App\Models\Responsavel; // <--- Importante: Crie este Model se não existir
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -16,54 +16,69 @@ class UserController extends Controller
 {
     public function store(Request $request)
     {
-        // 1. Validação
+        // 1. Validação de Segurança
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
-            'email' => 'required|email', // A regra unique será tratada abaixo
-            'tipo_acesso' => 'required|in:aluno,professor,coordenador',
-            'cpf' => 'nullable|string', // Idealmente validar CPF
+            'email' => 'required|email|unique:users,email',
+            // ADICIONADO: 'responsavel' na lista permitida
+            'tipo_acesso' => 'required|in:aluno,professor,coordenador,diretor,responsavel',
             'matricula' => 'required_if:tipo_acesso,aluno',
-            'departamento' => 'required_if:tipo_acesso,professor'
+            'departamento' => 'required_if:tipo_acesso,professor',
+            'cpf' => 'nullable|string',      // O front envia
+            'telefone' => 'nullable|string', // O front envia
         ]);
 
-        // 2. Transação (Para garantir que salva tudo ou nada)
+        // 2. Início da Transação
         return DB::transaction(function () use ($validated, $request) {
             
-            // Pega a instituição do Diretor logado
-            $instituicaoId = $request->user()->id_instituicao;
+            // Lógica de Fallback para testes (se não estiver logado, usa ID 1)
+            $userLogado = $request->user();
+            $instituicaoId = $userLogado ? $userLogado->id_instituicao : 1; 
 
-            // Cria o Perfil/Usuário
+            // A. Cria o Usuário de Acesso (Login)
             $user = User::create([
-                'id_instituicao' => $instituicaoId,
-                'nome' => $validated['nome'],
+                'name' => $validated['nome'],
                 'email' => $validated['email'],
-                'password' => Hash::make(Str::random(16)), // Senha temporária aleatória
-                // Aqui você precisará mapear o tipo para o ID do perfil correto na tabela perfis
-                // Para simplificar no MVP, vamos assumir que 'tipo' é uma string na tabela users por enquanto
-                'tipo_usuario' => $validated['tipo_acesso'], 
+                'id_instituicao' => $instituicaoId,
+                'tipo_usuario' => $validated['tipo_acesso'],
+                'password' => Hash::make(Str::random(12)),
+                'telefone' => $validated['telefone'] ?? null, // Salvando telefone
             ]);
 
-            // Cria os dados específicos (Tabelas Satélites)
+            // B. Cria os Dados Específicos (Tabelas Satélites)
+            
+            // --- ALUNO ---
             if ($validated['tipo_acesso'] === 'aluno') {
                 Aluno::create([
-                    'id_usuario' => $user->id,
+                    'id_perfil' => $user->id,
                     'id_instituicao' => $instituicaoId,
                     'rm' => $validated['matricula'],
-                    // outros dados...
+                    'cpf' => $validated['cpf'] ?? null, // Salvando CPF do aluno
                 ]);
-            } elseif ($validated['tipo_acesso'] === 'professor') {
+            } 
+            // --- PROFESSOR ---
+            elseif ($validated['tipo_acesso'] === 'professor') {
                 Professor::create([
-                    'id_usuario' => $user->id,
+                    'id_perfil' => $user->id,
                     'id_instituicao' => $instituicaoId,
-                    'departamento' => $validated['departamento'],
-                    // outros dados...
+                    'departamento' => $validated['departamento'] ?? null,
+                ]);
+            }
+            // --- RESPONSÁVEL (Novo) ---
+            elseif ($validated['tipo_acesso'] === 'responsavel') {
+                // Certifique-se de ter criado o arquivo app/Models/Responsavel.php
+                Responsavel::create([
+                    'id_perfil' => $user->id,
+                    'id_instituicao' => $instituicaoId,
+                    'cpf' => $validated['cpf'] ?? null,
+                    'endereco' => $request->input('endereco') ?? null, // Se o front enviar endereço no futuro
                 ]);
             }
 
-            // 3. Enviar E-mail de Convite (Fila)
-            // Mail::to($user->email)->queue(new ConviteUsuario($user));
-
-            return response()->json(['message' => 'Usuário criado e convite enviado!', 'user' => $user], 201);
+            return response()->json([
+                'message' => 'Usuário cadastrado com sucesso!',
+                'user' => $user
+            ], 201);
         });
     }
 }
