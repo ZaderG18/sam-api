@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController; // Importante: Verifique se AuthController está nesta pasta ou em Api/
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\InstituicaoController;
 use App\Http\Controllers\Api\SaaSController;
 use App\Http\Controllers\Api\UserController;
@@ -15,40 +15,37 @@ use App\Http\Controllers\Api\TurmaController;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes
+| API Routes - VERSÃO FINAL SEGURA
 |--------------------------------------------------------------------------
 */
 
-// === ROTAS PÚBLICAS (Abertas para teste) ===
-
+// === ROTAS PÚBLICAS ===
+// A única coisa que alguém de fora pode fazer é tentar logar
 Route::post('/login', [AuthController::class, 'login']);
-
-// [TEMPORÁRIO] Rota de cadastro aberta para você testar o formulário sem estar logado
-Route::post('/usuarios', [UserController::class, 'store']); 
 
 
 // === ROTAS PROTEGIDAS (Exigem Login + Token) ===
 Route::middleware('auth:sanctum')->group(function () {
 
+    // Endpoint para o Frontend saber quem está logado
     Route::get('/me', function (\Illuminate\Http\Request $request) {
         return $request->user()->load('perfil', 'instituicao');
     });
 
-    // 1. Rotas ADMIN SAAS
+    // 1. Rotas ADMIN SAAS (Só desenvolvedores)
     Route::middleware('role:admin_saas')->group(function () {
         Route::post('/instituicoes', [InstituicaoController::class, 'store']); 
         Route::get('/faturamento', [SaaSController::class, 'faturamento']); 
     });
 
-    // 2. Rotas DIRETOR
+    // 2. Rotas DIRETOR (Dono da Escola)
     Route::middleware('role:diretor')->group(function () {
-        // Route::post('/usuarios', [UserController::class, 'store']); // <--- Comentei aqui e movi para cima
+        // SEGURANÇA RESTABELECIDA: Só diretor logado cria usuários
+        Route::post('/usuarios', [UserController::class, 'store']); 
         Route::post('/cursos', [CursoController::class, 'store']);
         Route::get('/financeiro/inadimplencia', [FinanceiroController::class, 'inadimplencia']);
     });
 
-    // ... (Demais rotas mantidas iguais) ...
-    
     // 3. Rotas PROFESSOR
     Route::middleware('role:professor')->group(function () {
         Route::post('/chamada', [ChamadaController::class, 'store']);

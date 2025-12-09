@@ -33,7 +33,22 @@ class UserController extends Controller
             
             // Lógica de Fallback para testes (se não estiver logado, usa ID 1)
             $userLogado = $request->user();
-            $instituicaoId = $userLogado ? $userLogado->id_instituicao : 1; 
+           
+            // Lógica de Fallback:
+            // 1. Se tem usuário logado, usa a escola dele.
+            // 2. Se não tem (teste público), pega a PRIMEIRA escola que achar no banco.
+            if ($userLogado) {
+                $instituicaoId = $userLogado->id_instituicao;
+            } else {
+                // Busca a primeira escola cadastrada no banco para usar de teste
+                $escolaPadrao = DB::table('instituicoes')->first();
+                
+                if (!$escolaPadrao) {
+                    throw new \Exception("Nenhuma instituição encontrada! Rode 'php artisan db:seed' primeiro.");
+                }
+                
+                $instituicaoId = $escolaPadrao->id;
+            } 
 
             // A. Cria o Usuário de Acesso (Login)
             $user = User::create([

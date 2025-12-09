@@ -13,6 +13,20 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            
+            // === NOVOS CAMPOS DO SAM (SaaS) ===
+            // UUID da instituição (pode ser nulo apenas para o Admin SaaS/Super Admin)
+            $table->uuid('id_instituicao')->nullable(); 
+            
+            // Tipo de usuário (diretor, coordenador, professor, aluno, responsavel)
+            // Default 'aluno' para segurança, mas sempre será preenchido no cadastro
+            $table->string('tipo_usuario')->default('aluno'); 
+            
+            // Dados extras que o front já envia
+            $table->string('telefone')->nullable();
+            $table->string('foto_perfil')->nullable();
+            // ==================================
+
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
